@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -232,13 +232,13 @@
 			spi_3_active: spi_3_active {
 				mux {
 					pins = "gpio8", "gpio9",
-							"gpio10", "gpio11";
+							"gpio11";
 					function = "blsp_spi3";
 				};
 
 				config {
 					pins = "gpio8", "gpio9",
-							"gpio10", "gpio11";
+							"gpio11";
 					drive-strength = <6>;
 					bias-disable;
 				};
@@ -247,15 +247,39 @@
 			spi_3_sleep: spi_3_sleep {
 				mux {
 					pins = "gpio8", "gpio9",
-							"gpio10", "gpio11";
+							"gpio11";
 					function = "gpio";
 				};
 
 				config {
 					pins = "gpio8", "gpio9",
-							"gpio10", "gpio11";
+							"gpio11";
 					drive-strength = <6>;
 					bias-disable;
+				};
+			};
+
+			spi_3_cs0_active: spi_3_cs0_active {
+				mux {
+					pins = "gpio10";
+					function = "blsp_spi3";
+				};
+				config {
+					pins = "gpio10";
+					drive-strength = <6>;
+					bias-pull-up;
+				};
+			};
+
+			spi_3_cs0_sleep: spi_3_cs0_sleep {
+				mux {
+					pins = "gpio10";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio10";
+					drive-strength = <6>;
+					bias-pull-up;
 				};
 			};
 		};
@@ -1313,7 +1337,7 @@
 			};
 		};
 
-		tlmm_gpio_key {
+		 /*tlmm_gpio_key {
 			gpio_key_active: gpio_key_active {
 				mux {
 					pins = "gpio74", "gpio35", "gpio126";
@@ -1337,7 +1361,47 @@
 					bias-pull-up;
 				};
 			};
+		};*/
+/*awinic add for aw8695 start*/
+		msm_gpio_55:msm_gpio_55 {
+			mux {
+				pins="gpio55";
+				function= "gpio";
+			};
+			config {
+				pins= "gpio55";
+				drive-strength = <2>;
+				bias-disable;
+				output-low;
+			};
 		};
+
+		msm_gpio_55_output_high:msm_gpio_55_output_high {
+			mux {
+				pins = "gpio55";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio55";
+				drive-strength = <2>;
+				bias-disable;
+				output-high;
+			};
+		};
+	/*aw8695 interrupt set*/
+		msm_gpio_50:msm_gpio_50 {
+			mux {
+				pins = "gpio50";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio50";
+				drive-strength = <2>;
+				bias-pull-up;
+				input-enable;
+			};
+		};
+	/*awinic add for aw8695 end*/
 		cci {
 			cci0_active: cci0_active {
 				/* cci0 active state */

@@ -1193,7 +1193,7 @@ config TOUCHSCREEN_PCAP
 	  To compile this driver as a module, choose M here: the
 	  module will be called pcap_ts.
 
-config TOUCHSCREEN_RM_TS
+config TOUCHSCREEN_RM_TS_2X
 	tristate "Raydium I2C Touchscreen"
 	depends on I2C
 	depends on GPIOLIB || COMPILE_TEST
@@ -1426,3 +1426,31 @@ config TOUCHSCREEN_RAYDIUM_CHIPSET
 	  If unsure, say N.
 
 endif
+
+config TOUCHSCREEN_FTS
+    bool "Focaltech Touchscreen"
+	depends on I2C
+    help
+      Say Y here if you have Focaltech touch panel.
+      If unsure, say N.
+    
+config ENABEL_TOUCH_WAKEUP
+	bool "TOUCH_WAKEUP"
+	depends on TOUCHSCREEN_FTS
+  	help
+		  Say Y here if you want touch to wakeup.
+		  If unsure, say N.
+		  
+config TOUCHSCREEN_RM_TS_2X
+    bool "Raydium Touchscreen"
+	depends on I2C
+    help
+      Say Y here if you have Focaltech touch panel.
+      If unsure, say N.
+
+config RAYDIUM_TOUCH_WAKEUP
+    bool "Raydium Touch Wakeup"
+    depends on TOUCHSCREEN_RM_TS_2X
+    help
+	    Say Y here if you want touch to wakeup.
+	    If unsure, say N.

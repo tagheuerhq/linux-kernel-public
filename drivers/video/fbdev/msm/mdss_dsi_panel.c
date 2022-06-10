@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -425,7 +425,10 @@ free:
 ret:
 	return rc;
 }
-
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+extern int is_shutdown;
+extern unsigned int lcd_reset_high;
+#endif
 int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
@@ -484,6 +487,8 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 				}
 			}
 
+			if(DSI_CTRL_TP_RST)
+				usleep_range(13000,14000);
 			if (pdata->panel_info.rst_seq_len) {
 				rc = gpio_direction_output(ctrl_pdata->rst_gpio,
 					pdata->panel_info.rst_seq[0]);
@@ -495,8 +500,12 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			}
 
 			for (i = 0; i < pdata->panel_info.rst_seq_len; ++i) {
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+				gpio_set_value((ctrl_pdata->rst_gpio), 1);
+#else
 				gpio_set_value((ctrl_pdata->rst_gpio),
 					pdata->panel_info.rst_seq[i]);
+#endif
 				if (pdata->panel_info.rst_seq[++i])
 					usleep_range(pinfo->rst_seq[i] * 1000,
 						pinfo->rst_seq[i] * 1000);
@@ -552,11 +561,23 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 
 			gpio_free(ctrl_pdata->avdd_en_gpio);
 		}
-		if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+		if(is_shutdown == 1){
+			raydium_set_reset_gpio(0);
+			mdelay(10);
+			gpio_set_value((ctrl_pdata->rst_gpio), 0);
+			mdelay(10);
 			gpio_set_value((ctrl_pdata->disp_en_gpio), 0);
+		}
+#endif
+		if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
 			gpio_free(ctrl_pdata->disp_en_gpio);
 		}
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+		gpio_set_value((ctrl_pdata->rst_gpio), lcd_reset_high);
+#else
 		gpio_set_value((ctrl_pdata->rst_gpio), 0);
+#endif
 		gpio_free(ctrl_pdata->rst_gpio);
 		if (gpio_is_valid(ctrl_pdata->lcd_mode_sel_gpio)) {
 			gpio_set_value(ctrl_pdata->lcd_mode_sel_gpio, 0);
@@ -1105,6 +1126,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	}
 
 end:
+	/* clear idle state */
+	ctrl->idle = false;
 	pr_debug("%s:-\n", __func__);
 	return 0;
 }

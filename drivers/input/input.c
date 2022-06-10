@@ -651,6 +651,11 @@ EXPORT_SYMBOL(input_flush_device);
  * This function should be called by input handlers when they
  * want to stop receive events from given input device.
  */
+#ifdef CONFIG_ENABEL_TOUCH_WAKEUP
+static int fts_ts_close_first = 1;
+#define FTS_TS_OPEN_RUN_NUMBER   3;
+#endif
+
 void input_close_device(struct input_handle *handle)
 {
 	struct input_dev *dev = handle->dev;
@@ -658,6 +663,13 @@ void input_close_device(struct input_handle *handle)
 	mutex_lock(&dev->mutex);
 
 	__input_release_device(handle);
+
+#ifdef CONFIG_ENABEL_TOUCH_WAKEUP
+	if((!strcmp(dev->name, "fts_ts")|| !strcmp(dev->name, "raydium_ts_custom")) && fts_ts_close_first){
+		dev->users -= FTS_TS_OPEN_RUN_NUMBER;
+		fts_ts_close_first = 0;
+	}
+#endif
 
 	if (!--dev->users && dev->close)
 		dev->close(dev);

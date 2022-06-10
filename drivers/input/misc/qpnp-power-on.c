@@ -562,6 +562,8 @@ static int qpnp_pon_reset_config(struct qpnp_pon *pon,
 	bool disable = false;
 	u16 rst_en_reg;
 	struct qpnp_pon_config *cfg;
+	u8  pon_rt_bit = (QPNP_PON_KPDPWR_N_SET|QPNP_PON_CBLPWR_N_SET);
+	uint pon_rt_sts = 0;
 
 	/* Ignore the PS_HOLD reset config if TWM ENTRY is enabled */
 	if (pon->support_twm_config && pon->twm_state == PMIC_TWM_ENABLE) {
@@ -583,6 +585,16 @@ static int qpnp_pon_reset_config(struct qpnp_pon *pon,
 				pr_err("Unable to config KPDPWR_N S2 for hard-reset rc=%d\n",
 					rc);
 		}
+
+		do{
+			rc = qpnp_pon_read(pon, QPNP_PON_RT_STS(pon), &pon_rt_sts);
+			if (rc) {
+			pr_err("Unable to read QPNP_PON_RT_STS rc=%d\n",
+							rc);
+			return rc;
+			}
+
+		} while (pon_rt_sts & pon_rt_bit);
 
 		pr_crit("PMIC configured for TWM entry\n");
 		return 0;
@@ -823,6 +835,27 @@ int qpnp_pon_is_warm_reset(void)
 	return _qpnp_pon_is_warm_reset(sys_reset_dev);
 }
 EXPORT_SYMBOL(qpnp_pon_is_warm_reset);
+
+int qpnp_pon_is_kpd_pressed(void)
+{
+	struct qpnp_pon *pon = sys_reset_dev;
+	u8  pon_rt_bit = (QPNP_PON_KPDPWR_N_SET|QPNP_PON_CBLPWR_N_SET);
+	u32 status = 0;
+	uint pon_rt_sts;
+	int rc = 0;
+
+	if (pon->support_twm_config && pon->twm_state == PMIC_TWM_ENABLE) {
+		rc = regmap_read(pon->regmap,
+				QPNP_PON_RT_STS(pon), &pon_rt_sts);
+		if (rc) {
+			pr_err("[DBG] Unable to read ST register");
+			return rc;
+		}
+		status = pon_rt_sts & pon_rt_bit;
+	}
+	return status;
+}
+EXPORT_SYMBOL(qpnp_pon_is_kpd_pressed);
 
 /**
  * qpnp_pon_wd_config() - configure the watch dog behavior for warm reset

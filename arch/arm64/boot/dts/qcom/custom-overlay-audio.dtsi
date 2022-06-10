@@ -1,0 +1,13 @@
+
+&int_codec {
+	/delete-property/ asoc-wsa-codec-names;
+	/delete-property/ asoc-wsa-codec-prefixes;
+	/delete-property/ ext_pa_tfa98xx;
+	qcom,wcn-bt-slim = <1>;
+	asoc-codec = <&stub_codec>, <&msm_dig_codec>;
+	asoc-codec-names = "msm-stub-codec.1", "msm-dig-codec";
+};
+
+&ext_smart_pa{
+	status = "disabled";
+};

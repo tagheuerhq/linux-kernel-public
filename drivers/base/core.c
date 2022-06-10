@@ -871,6 +871,8 @@ static int dev_uevent_filter(struct kset *kset, struct kobject *kobj)
 			return 1;
 		if (dev->class)
 			return 1;
+		if (!strcmp(kobject_name(kobj), "gadget"))
+			return 1;
 	}
 	return 0;
 }
@@ -883,6 +885,8 @@ static const char *dev_uevent_name(struct kset *kset, struct kobject *kobj)
 		return dev->bus->name;
 	if (dev->class)
 		return dev->class->name;
+	if (!strcmp(kobject_name(kobj), "gadget"))
+		return kobject_name(kobj);
 	return NULL;
 }
 

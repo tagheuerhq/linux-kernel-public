@@ -28,6 +28,7 @@ struct bgrsb_priv {
 	struct work_struct rsb_down_work;
 	struct work_struct rsb_calibration_work;
 	struct work_struct bttn_configr_work;
+	struct delayed_work rsb_register_work;
 	struct workqueue_struct *bgrsb_wq;
 	struct bgrsb_regulator rgltr;
 	enum ldo_task ldo_action;
@@ -310,11 +311,36 @@ err_ret:
 static int bgrsb_enable(struct bgrsb_priv *dev, bool enable)
 {
 	struct bgrsb_msg req = {0};
-
+	int rc = 0;
 	req.cmd_id = 0x02;
 	req.data = enable ? 0x01 : 0x00;
+	if (dev == NULL) {
+		pr_err("bgrsb_enable has null ptr\n");
+		return rc;
+	}
+/* add by liuyu 2020-9-27 change for rsb rate start */
+	rc = bgrsb_tx_msg(dev, &req, BGRSB_MSG_SIZE);
+	if(enable ==true)
+	{
+		req.cmd_id = 0x03;
+		req.data = 0x23;//set report rate 35
+		rc = bgrsb_tx_msg(dev, &req, 5);
 
-	return bgrsb_tx_msg(dev, &req, BGRSB_MSG_SIZE);
+		if (rc != 0) {
+			pr_err("Failed to send resolution value to BG\n");
+			return rc;
+		}
+		req.cmd_id = 0x04;
+		req.data = 0x13;//default 13 set 19
+		rc = bgrsb_tx_msg(dev, &req, 5);
+
+		if (rc != 0) {
+			pr_err("Failed to send resolution value to BG\n");
+			return rc;
+		}
+	}
+	return rc;
+/* add by liuyu 2020-9-27 change for rsb rate end */
 }
 
 static int bgrsb_configr_rsb(struct bgrsb_priv *dev, bool enable)
@@ -380,6 +406,7 @@ static void bgrsb_bgup_work(struct work_struct *work)
 		pr_debug("RSB Cofigured\n");
 		if (dev->pending_enable)
 			queue_work(dev->bgrsb_wq, &dev->rsb_up_work);
+		queue_delayed_work(dev->bgrsb_wq, &dev->rsb_register_work, 1000);
 	}
 unlock:
 	mutex_unlock(&dev->rsb_state_mutex);
@@ -513,7 +540,25 @@ static void bgrsb_disable_rsb(struct work_struct *work)
 unlock:
 	mutex_unlock(&dev->rsb_state_mutex);
 }
+/* add by liuyu 2020-9-27 change for rsb rate start */
+static void bgrsb_write_rsb(struct work_struct *work)
+{
+	int rc = 0;
+	struct delayed_work *dw = to_delayed_work(work);
+	struct bgrsb_priv *dev =
+			container_of(dw, struct bgrsb_priv,
+							rsb_register_work);
+	if (dev == NULL) {
+		pr_err("bgrsb_write_rsb has null ptr\n");
+		return;
+	}
+	rc = bgrsb_enable(dev, true);
+	if (rc != 0) {
+		queue_delayed_work(dev->bgrsb_wq, &dev->rsb_register_work, 1000);
+	}
 
+}
+/* add by liuyu 2020-9-27 change for rsb rate end */
 static void bgrsb_calibration(struct work_struct *work)
 {
 	int rc = 0;
@@ -738,6 +783,7 @@ static int bgrsb_init(struct bgrsb_priv *dev)
 	INIT_WORK(&dev->bg_down_work, bgrsb_bgdown_work);
 	INIT_WORK(&dev->rsb_up_work, bgrsb_enable_rsb);
 	INIT_WORK(&dev->rsb_down_work, bgrsb_disable_rsb);
+	INIT_DELAYED_WORK(&dev->rsb_register_work, bgrsb_write_rsb);
 	INIT_WORK(&dev->rsb_calibration_work, bgrsb_calibration);
 	INIT_WORK(&dev->bttn_configr_work, bgrsb_buttn_configration);
 

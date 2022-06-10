@@ -70,6 +70,13 @@
 #define MDSS_STATUS_TE_WAIT_MAX		3
 #define NONE_PANEL "none"
 
+/*lining 20201219 Optimized display timing begin*/
+#define DSI_CTRL_TP_RST  1
+extern int fts_set_reset_proc(int reset_gpio_val);
+extern int raydium_set_reset_gpio(int raydium_reset_gpio_val);
+/*end*/
+
+
 enum {		/* mipi dsi panel */
 	DSI_VIDEO_MODE,
 	DSI_CMD_MODE,

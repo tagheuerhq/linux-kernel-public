@@ -95,6 +95,16 @@ config USB_GADGET_DEBUG_FS
 	   Enable these files by choosing "Y" here.  If in doubt, or
 	   to conserve kernel memory, say "N".
 
+config USB_GADGET_HOST_ACTION
+	bool "Enable host actions over USB"
+	help
+	   This feature allows a host to communicate in a basic way
+	   over USB control endpoint. With some specifically crafted
+	   vendor USB control packets, the host is able to request an
+	   action or receive some information.
+	   In addition a security layer allows to prevent the execution
+	   of actions by unauthorized hosts.
+
 config USB_GADGET_VBUS_DRAW
 	int "Maximum VBUS Power usage (2-900 mA)"
 	range 2 900

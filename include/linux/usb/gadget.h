@@ -538,6 +538,12 @@ struct usb_gadget {
 	bool				l1_supported;
 	bool				is_chipidea;
 	bool				self_powered;
+#ifdef CONFIG_USB_GADGET_HOST_ACTION
+	u16 				host_action;
+	char				host_info[2048];
+	u8  				host_challenge_response[2048];
+	ssize_t				host_challenge_response_size;
+#endif /* CONFIG_USB_GADGET_HOST_ACTION */
 };
 #define work_to_gadget(w)	(container_of((w), struct usb_gadget, work))
 

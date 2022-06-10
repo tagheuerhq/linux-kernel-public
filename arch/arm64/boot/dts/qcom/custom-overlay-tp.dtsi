@@ -1,0 +1,62 @@
+
+&i2c_4 {
+	status = "ok";
+
+	raydium_ts@39 {
+		compatible = "raydium,raydium-ts";
+		reg = <0x39>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <13 0x2008>;
+		vdd_ana-supply = <&pm660_l11>;
+		vcc_i2c-supply = <&pm660_l13>;
+		pinctrl-names = "pmx_ts_active","pmx_ts_suspend",
+					"pmx_ts_release";
+		pinctrl-0 = <&ts_int_active &ts_reset_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+		raydium,reset-gpio = <&tlmm 64 0x00>;
+		raydium,irq-gpio = <&tlmm 65 0x00>;
+		raydium,num-max-touches = <2>;
+		raydium,soft-reset-delay-ms = <50>;
+		raydium,hard-reset-delay-ms = <100>;
+		raydium,x_max = <416>;
+		raydium,y_max = <416>;
+		raydium,display-coords= <0  0 416 416>;
+	};
+
+	/* jianghan @ 20200820 To customize TP's dts and TP's drivers.  Begin*/
+
+		focaltech@38{
+		compatible = "focaltech,fts";
+		reg = <0x38>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <13 0x02>;
+		vdd_ana-supply = <&pm660_l11>;
+		vcc_i2c-supply = <&pm660_l13>;
+		focaltech,reset-gpio = <&tlmm 64 0x00>;
+		focaltech,irq-gpio = <&tlmm 65 0x00>;
+		/* start jianghan@202001219 add for VCI */
+		focaltech,platform-enable-gpio = <&pm660_gpios 12 0>;
+		focaltech,lcd-reset-gpio = <&tlmm 60 0>;
+		/* end jianghan@202001219 add for VCI */
+		focaltech,max-touch-number = <2>;
+		focaltech,display-coords= <0  0 416 416>;
+		focaltech,x_max = <416>;
+		focaltech,y_max = <416>;
+		pinctrl-names = "pmx_ts_active","pmx_ts_suspend",
+					"pmx_ts_release";
+		pinctrl-0 = <&ts_int_active &ts_reset_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+		focaltech,soft-reset-delay-ms = <50>;
+		focaltech,hard-reset-delay-ms = <100>;
+		// focaltech,key-number = <2>;
+		// focaltech,keys = <>;
+		// focaltech,key-x-coords = <>;
+		// focaltech,key-y-coords = <>;
+
+	/* End */
+
+	};
+};
+
