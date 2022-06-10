@@ -407,6 +407,7 @@ struct aw8695 {
 	int enable_pin_control;
 	struct work_struct vibrator_work;
 	struct work_struct rtp_work;
+	struct work_struct set_gain_work;
 	struct delayed_work ram_work;
 	struct delayed_work stop_work;
 	
@@ -452,6 +453,7 @@ struct aw8695 {
 	int index;
 	int vmax;
 	int gain;
+	u16 new_gain;
 	int f0_value;
 	unsigned char level;
 

@@ -1046,7 +1046,9 @@ static int aw8695_haptic_read_f0(struct aw8695 *aw8695)
 	f0_reg |= (reg_val << 0);
 	if (!f0_reg) {
 		pr_debug("%s not get f0 because f0_reg value is 0!\n", __func__);
+/* wangkunpeng@20210825 modify f0 when the motor is not connected begin */
 		aw8695->f0 = 0;
+/* end */
 		return 0;
 	}
 	f0_tmp = 1000000000 / (f0_reg * aw8695->info.f0_coeff);
@@ -2741,6 +2743,45 @@ static void aw8695_vibrator_work_routine(struct work_struct *work)
 	mutex_unlock(&aw8695->lock);
 }
 
+void aw8695_haptics_set_gain_work_routine(struct work_struct *work)
+{
+	unsigned char comp_level = 0;
+	struct aw8695 *aw8695 =
+	    container_of(work, struct aw8695, set_gain_work);
+
+	if (aw8695->new_gain >= 0x7FFF)
+		aw8695->level = 0x80;	/*128 */
+	else if (aw8695->new_gain <= 0x3FFF)
+		aw8695->level = 0x1E;	/*30 */
+	else
+		aw8695->level = (aw8695->new_gain - 16383) / 128;
+
+	if (aw8695->level < 0x1E)
+		aw8695->level = 0x1E;	/*30 */
+	pr_debug("%s: set_gain queue work, new_gain = %x level = %x\n",
+		__func__, aw8695->new_gain, aw8695->level);
+
+	if (aw8695->ram_vbat_comp == AW8695_HAPTIC_RAM_VBAT_COMP_ENABLE
+		&& aw8695->vbat) {
+		pr_debug("%s: ref %d vbat %d ", __func__, AW8695_VBAT_REFER,
+				aw8695->vbat);
+		comp_level = aw8695->level * AW8695_VBAT_REFER / aw8695->vbat;
+		if (comp_level > (128 * AW8695_VBAT_REFER / AW8695_VBAT_MIN)) {
+			comp_level = 128 * AW8695_VBAT_REFER / AW8695_VBAT_MIN;
+			pr_debug("%s: comp level limit is %d ", __func__,
+				 comp_level);
+		}
+		pr_debug("%s: enable vbat comp, level = %x comp level = %x",
+			__func__, aw8695->level, comp_level);
+		aw8695_i2c_write(aw8695, AW8695_REG_DATDBG, comp_level);
+	} else {
+		pr_debug("%s: disable compsensation, vbat=%d, vbat_min=%d, vbat_ref=%d",
+			 __func__, aw8695->vbat, AW8695_VBAT_MIN,
+			 AW8695_VBAT_REFER);
+		aw8695_i2c_write(aw8695, AW8695_REG_DATDBG, aw8695->level);
+	}
+}
+
 static int aw8695_vibrator_init(struct aw8695 *aw8695)
 {
 	//int ret = 0;
@@ -2789,9 +2830,8 @@ static int aw8695_vibrator_init(struct aw8695 *aw8695)
 	hrtimer_init(&aw8695->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	aw8695->timer.function = aw8695_vibrator_timer_func;
 	INIT_WORK(&aw8695->vibrator_work, aw8695_vibrator_work_routine);
-
 	INIT_WORK(&aw8695->rtp_work, aw8695_rtp_work_routine);
-
+	INIT_WORK(&aw8695->set_gain_work, aw8695_haptics_set_gain_work_routine);
 	mutex_init(&aw8695->lock);
 	mutex_init(&aw8695->rtp_lock);
 
@@ -3510,7 +3550,11 @@ static int aw8695_haptics_erase(struct input_dev *dev, int effect_id)
 
 static void aw8695_haptics_set_gain(struct input_dev *dev, u16 gain)
 {
+	struct aw8695 *aw8695 = input_get_drvdata(dev);
+
 	pr_debug("%s enter\n", __func__);
+	aw8695->new_gain = gain;
+	queue_work(aw8695->work_queue, &aw8695->set_gain_work);
 }
 
 /*static ssize_t aw8695_activate_test_show(struct device *dev,
@@ -3567,6 +3611,7 @@ static int aw8695_hw_reset(struct aw8695 *aw8695)
 	rc = select_pin_ctl(aw8695, "aw8695_reset_reset");
 	msleep(5);
 	rc = select_pin_ctl(aw8695, "aw8695_reset_active");
+	msleep(5);
 #endif
 
 	if (!aw8695->enable_pin_control) {
