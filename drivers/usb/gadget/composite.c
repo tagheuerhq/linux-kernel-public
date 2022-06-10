@@ -25,6 +25,8 @@
 
 #include "u_os_desc.h"
 
+#include "host_action.h"
+
 /**
  * struct usb_os_string - represents OS String to be reported by a gadget
  * @bLength: total length of the entire descritor, always 0x12
@@ -2014,6 +2016,31 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 		break;
 	default:
 unknown:
+
+			if (IS_ENABLED(CONFIG_USB_GADGET_HOST_ACTION)) {
+				/* Handle the USB control request if it is an Host Action */
+				value = host_action_handle_usb_request(gadget, ctrl);
+
+				/* Error during the Host Action request handling */
+				if (value < 0) goto done;
+
+				/* The Host Action request has been handled */
+				if (value > 0) {
+					/* Enqueue USB Response */
+					value = composite_ep0_queue(cdev, req, GFP_ATOMIC);
+					if (value < 0) {
+						ERROR(cdev, "ep_queue --> %d\n", value);
+						req->status = 0;
+						if (value != -ESHUTDOWN)
+							composite_setup_complete(gadget->ep0, req);
+					}
+
+					goto done;
+				}
+
+			/* The USB control request is NOT an Host Action: continue */
+			}
+
 		/*
 		 * OS descriptors handling
 		 */
@@ -2313,6 +2340,12 @@ int composite_dev_prepare(struct usb_composite_driver *composite,
 	if (ret)
 		goto fail_dev;
 
+	if (IS_ENABLED(CONFIG_USB_GADGET_HOST_ACTION)) {
+		ret = host_action_create_sysfs_files(&gadget->dev);
+		if (ret)
+			goto fail_dev;
+	}
+
 	cdev->req->complete = composite_setup_complete;
 	cdev->req->context = cdev;
 	gadget->ep0->driver_data = cdev;
@@ -2392,6 +2425,9 @@ void composite_dev_cleanup(struct usb_composite_dev *cdev)
 		cdev->req = NULL;
 	}
 	cdev->next_string_id = 0;
+	if (IS_ENABLED(CONFIG_USB_GADGET_HOST_ACTION)) {
+		host_action_remove_sysfs_files(&cdev->gadget->dev);
+	}
 	device_remove_file(&cdev->gadget->dev, &dev_attr_suspended);
 }
 

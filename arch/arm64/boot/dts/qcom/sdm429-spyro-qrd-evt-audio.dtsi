@@ -19,7 +19,7 @@
 	qcom,split-a2dp;
 	asoc-wsa-codec-names;
 	asoc-wsa-codec-prefixes;
-	ext_pa_tfa98xx;
+		//ext_pa_tfa98xx;
 	qcom,audio-routing =
 		"CDC_CONN", "MCLK",
 		"QUAT_MI2S_RX", "DIGITAL_REGULATOR",

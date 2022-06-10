@@ -1,0 +1,82 @@
+
+qcom,5080993_lc_b841_452mah_pmw3100_averaged_masterslave_feb8th2021 {
+	qcom, = <24>;
+	/* #5080993_LC_B841_452mAH_PMW3100_averaged_MasterSlave_Feb8th2021*/
+	qcom,max-voltage-uv = <4450000>;
+	qcom,fastchg-current-ma = <425>;
+	qcom,fg-cc-cv-threshold-mv = <4440>;
+	qcom,nom-batt-capacity-mah = <440>;
+	qcom,batt-id-kohm = <100>;
+	qcom,battery-beta = <4250>;
+	qcom,battery-type = "5080993_lc_b841_452mah_pmw3100_averaged_masterslave_feb8th2021";
+	qcom,checksum = <0x81D7>;
+	qcom,gui-version = "PM660GUI - 0.0.0.45";
+	qcom,jeita-fcc-ranges = <0   100  75000
+				101 200  100000
+				201 450  425000
+				451 550  150000>;
+	qcom,jeita-fv-ranges = <0   100  4450000
+				101 200  4450000
+				201 450  4450000
+				451 530  4100000>;
+	qcom,step-chg-ranges = <3500000  4400000  425000
+			4401000  4450000  150000>;
+	qcom,fg-profile-data = [
+		 55 24 1F 0C
+		 4C 13 2F 0D
+		 F6 1C 6E 01
+		 EA 05 D5 02
+		 15 19 13 22
+		 49 3D 75 4A
+		 9A 00 00 00
+		 17 00 00 00
+		 00 00 09 C4
+		 FE 07 03 CA
+		 32 00 08 00
+		 37 EB D9 F5
+		 77 F5 48 D5
+		 52 E4 62 02
+		 89 05 27 5A
+		 0F 06 09 20
+		 27 00 14 00
+		 98 20 37 04
+		 F9 0B 95 04
+		 D8 1C CA 02
+		 49 0C 24 12
+		 A7 18 6B 23
+		 A0 44 4F 5A
+		 6D 00 00 00
+		 0F 00 00 00
+		 00 00 54 CD
+		 96 B3 6B B4
+		 2F 00 00 00
+		 AD 00 D9 F5
+		 FB F5 5B E5
+		 04 ED D4 00
+		 6D F5 6A 13
+		 99 33 CC FF
+		 07 10 00 00
+		 D3 01 33 47
+		 2F 00 40 00
+		 FE 04 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};

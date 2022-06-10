@@ -1536,6 +1536,7 @@ static int qcom_smd_parse_edge(struct device *dev,
 
 	edge->irq = irq;
 
+
 	return 0;
 }
 

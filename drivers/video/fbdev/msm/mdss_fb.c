@@ -2,7 +2,7 @@
  * Core MDSS framebuffer driver.
  *
  * Copyright (C) 2007 Google Incorporated
- * Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2021, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -979,12 +979,18 @@ static void mdss_fb_remove_sysfs(struct msm_fb_data_type *mfd)
 {
 	sysfs_remove_group(&mfd->fbi->dev->kobj, &mdss_fb_attr_group);
 }
-
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+int is_shutdown = 0;
+EXPORT_SYMBOL_GPL(is_shutdown);
+#endif
 static void mdss_fb_shutdown(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
 
 	mfd->shutdown_pending = true;
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+	is_shutdown = 1;
+#endif
 
 	/* wake up threads waiting on idle or kickoff queues */
 	wake_up_all(&mfd->idle_wait_q);
@@ -1631,19 +1637,6 @@ static int mdss_fb_pm_suspend(struct device *dev)
 
 	rc = mdss_fb_suspend_sub(mfd);
 
-	/*
-	 * Call MDSS footswitch control to ensure GDSC is
-	 * off after pm suspend call. There are cases when
-	 * mdss runtime call doesn't trigger even when clock
-	 * ref count is zero after fb pm suspend.
-	 */
-	if (!rc) {
-		if (mfd->mdp.footswitch_ctrl)
-			mfd->mdp.footswitch_ctrl(false);
-	} else {
-		pr_err("fb pm suspend failed, rc: %d\n", rc);
-	}
-
 	return rc;
 
 }
@@ -1664,9 +1657,6 @@ static int mdss_fb_pm_resume(struct device *dev)
 	pm_runtime_disable(dev);
 	pm_runtime_set_suspended(dev);
 	pm_runtime_enable(dev);
-
-	if (mfd->mdp.footswitch_ctrl)
-		mfd->mdp.footswitch_ctrl(true);
 
 	return mdss_fb_resume_sub(mfd);
 }

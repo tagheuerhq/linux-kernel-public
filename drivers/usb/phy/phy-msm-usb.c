@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2019, Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2020, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -53,6 +53,8 @@
 
 #include <linux/msm-bus.h>
 
+#define DP_PULSE_WIDTH_MSEC 200
+static int msm_otg_phy_drive_dp_pulse(struct msm_otg *motg, unsigned int pulse_width);
 /**
  * Requested USB votes for BUS bandwidth
  *
@@ -117,7 +119,7 @@ enum msm_usb_phy_type {
 	QUSB_ULPI_PHY,
 };
 
-#define IDEV_CHG_MAX	1500
+#define IDEV_CHG_MAX	500
 #define IUNIT		100
 #define IDEV_HVDCP_CHG_MAX	1800
 
@@ -251,7 +253,7 @@ module_param(lpm_disconnect_thresh, uint, 0644);
 MODULE_PARM_DESC(lpm_disconnect_thresh,
 	"Delay before entering LPM on USB disconnect");
 
-static bool floated_charger_enable;
+static bool floated_charger_enable = 1;
 module_param(floated_charger_enable, bool, 0644);
 MODULE_PARM_DESC(floated_charger_enable,
 	"Whether to enable floated charger");
@@ -266,7 +268,7 @@ static int dcp_max_current = IDEV_CHG_MAX;
 module_param(dcp_max_current, int, 0644);
 MODULE_PARM_DESC(dcp_max_current, "max current drawn for DCP charger");
 
-static bool chg_detection_for_float_charger;
+static bool chg_detection_for_float_charger = 1;
 module_param(chg_detection_for_float_charger, bool, 0644);
 MODULE_PARM_DESC(chg_detection_for_float_charger,
 	"Whether to do PHY based charger detection for float chargers");
@@ -881,6 +883,7 @@ static int msm_otg_reset(struct usb_phy *phy)
 	u32 val = 0;
 	u32 ulpi_val = 0;
 
+	mutex_lock(&motg->lock);
 	msm_otg_dbg_log_event(&motg->phy, "USB RESET", phy->otg->state,
 			get_pm_runtime_counter(phy->dev));
 	/*
@@ -889,10 +892,13 @@ static int msm_otg_reset(struct usb_phy *phy)
 	 * USB BAM reset on other cases e.g. USB cable disconnections.
 	 * If hardware reported error then it must be reset for recovery.
 	 */
-	if (motg->err_event_seen)
+	if (motg->err_event_seen) {
 		dev_info(phy->dev, "performing USB h/w reset for recovery\n");
-	else if (pdata->disable_reset_on_disconnect && motg->reset_counter)
+	} else if (pdata->disable_reset_on_disconnect &&
+				motg->reset_counter) {
+		mutex_unlock(&motg->lock);
 		return 0;
+	}
 
 	motg->reset_counter++;
 
@@ -907,6 +913,7 @@ static int msm_otg_reset(struct usb_phy *phy)
 			enable_irq(motg->phy_irq);
 
 		enable_irq(motg->irq);
+		mutex_unlock(&motg->lock);
 		return ret;
 	}
 
@@ -917,6 +924,7 @@ static int msm_otg_reset(struct usb_phy *phy)
 	ret = msm_otg_link_reset(motg);
 	if (ret) {
 		dev_err(phy->dev, "link reset failed\n");
+		mutex_unlock(&motg->lock);
 		return ret;
 	}
 
@@ -973,6 +981,7 @@ static int msm_otg_reset(struct usb_phy *phy)
 
 	if (phy->otg->state == OTG_STATE_UNDEFINED && motg->rm_pulldown)
 		msm_chg_block_on(motg);
+	mutex_unlock(&motg->lock);
 
 	return 0;
 }
@@ -2821,6 +2830,9 @@ static void msm_otg_sm_work(struct work_struct *w)
 				get_pm_runtime_counter(dev), 0);
 			pm_runtime_put_sync(dev);
 			break;
+		} else if (get_psy_type(motg) == POWER_SUPPLY_TYPE_USB_CDP) {
+			pr_debug("Connected to CDP, pull DP up from sm_work\n");
+			msm_otg_phy_drive_dp_pulse(motg, DP_PULSE_WIDTH_MSEC);
 		}
 		pm_runtime_put(dev);
 		/* FALL THROUGH */
@@ -2851,9 +2863,7 @@ static void msm_otg_sm_work(struct work_struct *w)
 
 			pm_runtime_get_sync(otg->usb_phy->dev);
 			msm_otg_start_peripheral(otg, 1);
-			if (get_psy_type(motg) == POWER_SUPPLY_TYPE_USB_FLOAT ||
-				(get_psy_type(motg) == POWER_SUPPLY_TYPE_USB &&
-				motg->enable_sdp_check_timer)) {
+			if (get_psy_type(motg) == POWER_SUPPLY_TYPE_USB_FLOAT) {
 				queue_delayed_work(motg->otg_wq,
 					&motg->sdp_check,
 					msecs_to_jiffies(
@@ -2989,19 +2999,31 @@ msm_otg_phy_drive_dp_pulse(struct msm_otg *motg, unsigned int pulse_width)
 {
 	int ret = 0;
 	u32 val;
+	bool in_lpm = false;
 
 	msm_otg_dbg_log_event(&motg->phy, "DRIVE DP PULSE",
 				motg->inputs, 0);
-	ret = msm_hsusb_ldo_enable(motg, USB_PHY_REG_ON);
-	if (ret)
-		return ret;
-	msm_hsusb_config_vddcx(1);
-	ret = regulator_enable(hsusb_vdd);
-	WARN(ret, "hsusb_vdd LDO enable failed for driving pulse\n");
-	clk_prepare_enable(motg->xo_clk);
-	clk_prepare_enable(motg->phy_csr_clk);
-	clk_prepare_enable(motg->core_clk);
-	clk_prepare_enable(motg->pclk);
+	if (atomic_read(&motg->in_lpm)) {
+		in_lpm = true;
+		msm_otg_dbg_log_event(&motg->phy, "IN_LPM",
+				motg->inputs, 0);
+	}
+
+	if (in_lpm) {
+		ret = msm_hsusb_ldo_enable(motg, USB_PHY_REG_ON);
+		if (ret)
+			return ret;
+		msm_otg_dbg_log_event(&motg->phy, "ENABCLK",
+				motg->inputs, 0);
+		msm_hsusb_config_vddcx(1);
+		ret = regulator_enable(hsusb_vdd);
+		WARN(ret, "hsusb_vdd LDO enable failed for driving pulse\n");
+		udelay(50);
+		clk_prepare_enable(motg->xo_clk);
+		clk_prepare_enable(motg->phy_csr_clk);
+		clk_prepare_enable(motg->core_clk);
+		clk_prepare_enable(motg->pclk);
+	}
 
 	msm_otg_exit_phy_retention(motg);
 
@@ -3047,24 +3069,29 @@ msm_otg_phy_drive_dp_pulse(struct msm_otg *motg, unsigned int pulse_width)
 
 	/* Make sure above writes are completed before clks off */
 	mb();
-	clk_disable_unprepare(motg->pclk);
-	clk_disable_unprepare(motg->core_clk);
-	clk_disable_unprepare(motg->phy_csr_clk);
-	clk_disable_unprepare(motg->xo_clk);
-	regulator_disable(hsusb_vdd);
-	msm_hsusb_config_vddcx(0);
-	msm_hsusb_ldo_enable(motg, USB_PHY_REG_OFF);
+	if (in_lpm) {
+		msm_otg_dbg_log_event(&motg->phy, "DISABCLK",
+				motg->inputs, 0);
+		clk_disable_unprepare(motg->pclk);
+		clk_disable_unprepare(motg->core_clk);
+		clk_disable_unprepare(motg->phy_csr_clk);
+		clk_disable_unprepare(motg->xo_clk);
+		regulator_disable(hsusb_vdd);
+		msm_hsusb_config_vddcx(0);
+		msm_hsusb_ldo_enable(motg, USB_PHY_REG_OFF);
+	} else
+		msm_otg_reset(&motg->phy);
 
 	msm_otg_dbg_log_event(&motg->phy, "DP PULSE DRIVEN",
 				motg->inputs, 0);
 	return 0;
 }
 
-#define DP_PULSE_WIDTH_MSEC 200
 
 static void msm_otg_set_vbus_state(int online)
 {
 	struct msm_otg *motg = the_msm_otg;
+	struct usb_otg *otg = motg->phy.otg;
 
 	motg->vbus_state = online;
 
@@ -3077,7 +3104,8 @@ static void msm_otg_set_vbus_state(int online)
 				motg->inputs, 0);
 		if (test_and_set_bit(B_SESS_VLD, &motg->inputs))
 			return;
-		if (get_psy_type(motg) == POWER_SUPPLY_TYPE_USB_CDP) {
+		if ((get_psy_type(motg) == POWER_SUPPLY_TYPE_USB_CDP) &&
+		    (otg->state != OTG_STATE_UNDEFINED)) {
 			pr_debug("Connected to CDP, pull DP up\n");
 			msm_otg_phy_drive_dp_pulse(motg, DP_PULSE_WIDTH_MSEC);
 		}
@@ -3111,6 +3139,7 @@ static void msm_otg_set_vbus_state(int online)
 	 */
 	if (test_bit(B_SESS_VLD, &motg->inputs) && !motg->chg_detection) {
 		if ((get_psy_type(motg) == POWER_SUPPLY_TYPE_UNKNOWN) ||
+			(get_psy_type(motg) == POWER_SUPPLY_TYPE_USB) ||   /*float charge*/
 		    (get_psy_type(motg) == POWER_SUPPLY_TYPE_USB_FLOAT &&
 		     chg_detection_for_float_charger))
 			motg->chg_detection = true;
@@ -3431,8 +3460,7 @@ static int msm_otg_dpdm_regulator_enable(struct regulator_dev *rdev)
 
 		motg->rm_pulldown = true;
 		/* Don't reset h/w if previous disconnect handling is pending */
-		if (phy->otg->state == OTG_STATE_B_IDLE ||
-		    phy->otg->state == OTG_STATE_UNDEFINED)
+		if (phy->otg->state == OTG_STATE_UNDEFINED)
 			msm_otg_set_mode_nondriving(motg, true);
 		else
 			msm_otg_dbg_log_event(&motg->phy, "NonDrv err",
@@ -3450,8 +3478,7 @@ static int msm_otg_dpdm_regulator_disable(struct regulator_dev *rdev)
 
 	if (motg->rm_pulldown) {
 		/* Let sm_work handle it if USB core is active */
-		if (phy->otg->state == OTG_STATE_B_IDLE ||
-		    phy->otg->state == OTG_STATE_UNDEFINED)
+		if (phy->otg->state == OTG_STATE_UNDEFINED)
 			msm_otg_set_mode_nondriving(motg, false);
 
 		ret = msm_hsusb_ldo_enable(motg, USB_PHY_REG_3P3_OFF);
@@ -4069,11 +4096,11 @@ static int msm_otg_probe(struct platform_device *pdev)
 	}
 
 	motg->phy_por_reset = devm_reset_control_get(&pdev->dev,
-						"phy_por_reset");
-	if (IS_ERR(motg->phy_por_reset)) {
-		dev_err(&pdev->dev, "failed to get phy_por_reset\n");
-		ret = PTR_ERR(motg->phy_por_reset);
-		goto disable_sleep_clk;
+							"phy_por_reset");
+		if (IS_ERR(motg->phy_por_reset)) {
+			dev_err(&pdev->dev, "failed to get phy_por_reset\n");
+			ret = PTR_ERR(motg->phy_por_reset);
+			goto disable_sleep_clk;
 	}
 
 	/*
@@ -4147,6 +4174,7 @@ static int msm_otg_probe(struct platform_device *pdev)
 	motg->pdev = pdev;
 	motg->dbg_idx = 0;
 	motg->dbg_lock = __RW_LOCK_UNLOCKED(lck);
+	mutex_init(&motg->lock);
 
 	if (motg->pdata->bus_scale_table) {
 		motg->bus_perf_client =

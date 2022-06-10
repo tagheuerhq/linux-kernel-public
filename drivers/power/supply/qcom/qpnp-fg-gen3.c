@@ -582,7 +582,7 @@ static int fg_get_battery_temp(struct fg_dev *fg, int *val)
 	temp = DIV_ROUND_CLOSEST(temp, 4);
 
 	/* Value is in Kelvin; Convert it to deciDegC */
-	temp = (temp - 273) * 10;
+	temp = (temp - 273) * 10 - 20;
 	*val = temp;
 	return 0;
 }

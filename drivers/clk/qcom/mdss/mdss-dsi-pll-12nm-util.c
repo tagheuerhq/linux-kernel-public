@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -146,7 +146,7 @@ int get_post_div_mux_sel(void *context, unsigned int reg,
 		else if (vco_cntrl == 0x20)
 			*sel = 3;
 		else if (vco_cntrl == 0x30)
-			*sel = 4;
+			*sel = 3;
 	} else if (cpbias_cntrl == 1) {
 		if (vco_cntrl == 0x30)
 			*sel = 2;
@@ -306,7 +306,7 @@ static int dsi_pll_relock(struct mdss_pll_resources *pll)
 
 	data = MDSS_PLL_REG_R(pll_base, DSIPHY_PLL_POWERUP_CTRL);
 	data &= ~BIT(1); /* remove ONPLL_OVR_EN bit */
-	data |= 0x1; /* set ONPLL_OVN to 0x1 */
+	data &= ~BIT(0); /* clear ONPLL_OVN bit*/
 	MDSS_PLL_REG_W(pll_base, DSIPHY_PLL_POWERUP_CTRL, data);
 	ndelay(500); /* h/w recommended delay */
 	MDSS_PLL_REG_W(pll_base, DSIPHY_SYS_CTRL, 0x49);
@@ -761,6 +761,9 @@ static void pll_db_commit_12nm(struct mdss_pll_resources *pll,
 	data = ((param->hsfreqrange & 0x7f) | BIT(7));
 	MDSS_PLL_REG_W(pll_base, DSIPHY_HS_FREQ_RAN_SEL, data);
 
+	data = ((0x62 & 0x3f) | BIT(6));
+	MDSS_PLL_REG_W(pll_base, DSIPHY_PLL_VCO_CTRL, data);
+
 	data = (param->osc_freq_target & 0x7f);
 	MDSS_PLL_REG_W(pll_base, DSIPHY_SLEWRATE_DDL_CYC_FRQ_ADJ_0, data);
 
@@ -783,6 +786,10 @@ static void pll_db_commit_12nm(struct mdss_pll_resources *pll,
 
 	data = ((param->gmp_cntrl & 0x3) << 4);
 	MDSS_PLL_REG_W(pll_base, DSIPHY_PLL_GMP_CTRL_DIG_TST, data);
+
+	data = ((0x00 & 0x1) << 6) | BIT(4);
+	MDSS_PLL_REG_W(pll_base, DSIPHY_PLL_CHAR_PUMP_BIAS_CTRL, data);
+
 
 	MDSS_PLL_REG_W(pll_base, DSIPHY_PLL_ANA_PROG_CTRL, 0x03);
 	MDSS_PLL_REG_W(pll_base, DSIPHY_PLL_ANA_TST_LOCK_ST_OVR_CTRL, 0x50);

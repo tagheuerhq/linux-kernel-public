@@ -1,0 +1,58 @@
+&tlmm {
+	tlmm_gpio_key {
+		gpio_key_active: gpio_key_active {
+					 mux {
+						 pins = "gpio74", "gpio126";
+						 function = "gpio";
+					 };
+
+					 config {
+						 pins = "gpio74", "gpio126";
+						 drive-strength = <2>;
+						 bias-pull-up;
+					 };
+				 };
+
+		gpio_key_suspend: gpio_key_suspend {
+					  mux {
+						  pins = "gpio74", "gpio126";
+						  function = "gpio";
+					  };
+
+					  config {
+						  pins = "gpio74", "gpio126";
+						  drive-strength = <2>;
+						  bias-pull-up;
+					  };
+				  };
+	};
+};
+
+&soc {
+	gpio_keys {
+		compatible = "gpio-keys";
+		input-name = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&gpio_key_active>;
+
+		stem1 {
+			label = "stem1";
+			gpios = <&tlmm 74 0x1>;
+			linux,input-type = <1>;
+			linux,code = <750>;
+			debounce-interval = <15>;
+			linux,can-disable;
+			gpio-key,wakeup;
+		};
+		stem2 {
+			label = "stem2";
+			gpios = <&tlmm 126 0x1>;
+			linux,input-type = <1>;
+			linux,code = <751>;
+			debounce-interval = <15>;
+			linux,can-disable;
+			gpio-key,wakeup;
+		};
+	};
+};
+

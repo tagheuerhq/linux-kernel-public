@@ -593,22 +593,25 @@ endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_SDM429W) += sdm429-wtp-overlay.dtbo\
-		sdm429-wdp-overlay.dtbo\
-		sdm429-bg-dvt2-wtp-overlay.dtbo\
-		sdm429-spyro-qrd-newport-overlay.dtbo\
-		sdm429-spyro-qrd-newport-v2-overlay.dtbo\
-		sda429-wdp-overlay.dtbo\
-		sda429-wtp-overlay.dtbo\
-		sda429-bg-dvt2-wtp-overlay.dtbo
+		custom-overlay.dtbo
+#		sdm429-wdp-overlay.dtbo\
+#		sdm429-bg-dvt2-wtp-overlay.dtbo\
+#		sdm429-spyro-qrd-newport-overlay.dtbo\
+#		sdm429-spyro-qrd-newport-v2-overlay.dtbo\
+#		sda429-wdp-overlay.dtbo\
+#		sda429-wtp-overlay.dtbo\
+#		sda429-bg-dvt2-wtp-overlay.dtbo\
+#		dtbo-$(CONFIG_ARCH_SDM429W) += custom-overlay.dtbo
 
+custom-overlay.dtbo-base := sda429.dtb
 sdm429-wtp-overlay.dtbo-base := sdm429.dtb
-sdm429-wdp-overlay.dtbo-base := sdm429.dtb
-sdm429-bg-dvt2-wtp-overlay.dtbo-base := sdm429.dtb
-sdm429-spyro-qrd-newport-overlay.dtbo-base := sdm429-spyro.dtb
-sdm429-spyro-qrd-newport-v2-overlay.dtbo-base := sdm429-spyro-qrd-newport-v2.dtb
-sda429-wtp-overlay.dtbo-base := sda429.dtb
-sda429-wdp-overlay.dtbo-base := sda429.dtb
-sda429-bg-dvt2-wtp-overlay.dtbo-base := sda429.dtb
+#sdm429-wdp-overlay.dtbo-base := sdm429.dtb
+#sdm429-bg-dvt2-wtp-overlay.dtbo-base := sdm429.dtb
+#sdm429-spyro-qrd-newport-overlay.dtbo-base := sdm429-spyro.dtb
+#sdm429-spyro-qrd-newport-v2-overlay.dtbo-base := sdm429-spyro-qrd-newport-v2.dtb
+#sda429-wtp-overlay.dtbo-base := sda429.dtb
+#sda429-wdp-overlay.dtbo-base := sda429.dtb
+#sda429-bg-dvt2-wtp-overlay.dtbo-base := sda429.dtb
 else
 dtb-$(CONFIG_ARCH_SDM429W) += sdm429-wtp.dtb\
 	sdm429-wdp.dtb\
@@ -616,6 +619,7 @@ dtb-$(CONFIG_ARCH_SDM429W) += sdm429-wtp.dtb\
 	sda429-wtp.dtb\
 	sda429-wdp.dtb\
 	sda429-bg-dvt2-wtp.dtb
+dtb-$(CONFIG_ARCH_SDM429W) += custom-overlay.dtb
 endif
 
 endif

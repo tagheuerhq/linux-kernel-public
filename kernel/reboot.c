@@ -254,8 +254,15 @@ EXPORT_SYMBOL_GPL(kernel_halt);
  *
  *	Shutdown everything and perform a clean system power_off.
  */
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+extern unsigned int lcd_reset_high;
+#endif
 void kernel_power_off(void)
 {
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+	lcd_reset_high = 0;
+	pr_err("sun6009202013 %s %d lcd_reset_high=%d", __func__, __LINE__, lcd_reset_high);
+#endif
 	kernel_shutdown_prepare(SYSTEM_POWER_OFF);
 	if (pm_power_off_prepare)
 		pm_power_off_prepare();

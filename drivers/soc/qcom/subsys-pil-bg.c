@@ -459,6 +459,7 @@ static int bg_auth_and_xfer(struct pil_desc *pil)
 
 	ret = bgpil_tzapp_comm(bg_data, &bg_tz_req);
 	if (bg_data->cmd_status == BG_CRASH_IN_TWM) {
+		pr_err("BG cmd_status: %d\n", bg_data->cmd_status);
 		/* Do ramdump and resend boot cmd */
 		if (is_twm_exit())
 			bg_data->subsys_desc.ramdump(true,

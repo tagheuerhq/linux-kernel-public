@@ -1,0 +1,19 @@
+
+&mtp_batterydata {
+	qcom,batt-id-range-pct = <15>;
+	#include "custom-overlay-charge-fg-batterydata-452mah.dtsi"
+};
+&pm660_fg {
+	qcom,fg-chg-term-current = <25>;
+	qcom,fg-jeita-thresholds = <0 20 45 55>;
+	qcom,battery-thermal-coefficients = [d2 50 ff];
+	qcom,fg-recharge-voltage = <4300>;
+};
+
+&pm660_charger {
+	qcom,battery-data = <&mtp_batterydata>;
+	qcom,step-charging-enable;
+	qcom,sw-jeita-enable;
+	qcom,wd-bark-time-secs = <32>;
+	qcom,fv-max-uv = <4450000>;
+};

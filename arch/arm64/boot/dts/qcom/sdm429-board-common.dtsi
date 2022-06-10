@@ -10,8 +10,8 @@
  * GNU General Public License for more details.
  */
 
-&soc {
-	gpio_keys: gpio_keys {
+/*&soc {
+	 gpio_keys: gpio_keys {
 		compatible = "gpio-keys";
 		label = "gpio-keys";
 		pinctrl-names = "default";
@@ -48,4 +48,4 @@
 			gpio-key,wakeup;
 		};
 	};
-};
+};*/

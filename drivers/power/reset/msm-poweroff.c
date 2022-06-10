@@ -422,12 +422,16 @@ static void do_msm_poweroff(void)
 	scm_disable_sdi();
 	qpnp_pon_system_pwr_off(PON_POWER_OFF_SHUTDOWN);
 
+	while (qpnp_pon_is_kpd_pressed())
+		pr_notice("[DBG] keypad_pressed: wait for release\n");
+
 	halt_spmi_pmic_arbiter();
 	deassert_ps_hold();
 
 	msleep(10000);
 	pr_err("Powering off has failed\n");
 }
+
 
 #ifdef CONFIG_QCOM_DLOAD_MODE
 static ssize_t attr_show(struct kobject *kobj, struct attribute *attr,

@@ -361,7 +361,9 @@ static int mdss_dsi_regulator_init(struct platform_device *pdev,
 
 	return rc;
 }
-
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+extern unsigned int lcd_reset_high;
+#endif
 static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -381,7 +383,9 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		pr_warn("%s: Panel reset failed. rc=%d\n", __func__, ret);
 		ret = 0;
 	}
-
+#ifdef CONFIG_RAYDIUM_TOUCH_WAKEUP
+	if (!lcd_reset_high)
+#endif
 	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, false))
 		pr_debug("reset disable: pinctrl not enabled\n");
 
@@ -1752,8 +1756,13 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 
 	if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_LP) {
 		pr_debug("%s: dsi_unblank with panel always on\n", __func__);
-		if (ctrl_pdata->low_power_config)
+		if (ctrl_pdata->low_power_config){
 			ret = ctrl_pdata->low_power_config(pdata, false);
+			}
+		if (ctrl_pdata->low_power_config) {
+			ret = ctrl_pdata->low_power_config(pdata, false);
+			mdss_mdp_set_panel_idle_mode(false);
+		}
 		if (!ret)
 			ctrl_pdata->ctrl_state &= ~CTRL_STATE_PANEL_LP;
 		goto error;
@@ -1816,8 +1825,10 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 
 	if (mdss_panel_is_power_on_lp(power_state)) {
 		pr_debug("%s: low power state requested\n", __func__);
-		if (ctrl_pdata->low_power_config)
+		if (ctrl_pdata->low_power_config) {
 			ret = ctrl_pdata->low_power_config(pdata, true);
+			mdss_mdp_set_panel_idle_mode(true);
+		}
 		if (!ret)
 			ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_LP;
 		goto error;
